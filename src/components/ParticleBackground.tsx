@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef } from "react";
 
 interface Particle {
@@ -7,6 +8,7 @@ interface Particle {
   speedX: number;
   speedY: number;
   element: HTMLDivElement;
+  z: number; // Added z coordinate for 3D effect
 }
 
 interface Connection {
@@ -37,29 +39,34 @@ const ParticleBackground: React.FC = () => {
       particlesRef.current = [];
       
       // Calculate number of particles based on screen size
-      const particleCount = Math.min(50, Math.floor(window.innerWidth * window.innerHeight / 10000));
+      const particleCount = Math.min(70, Math.floor(window.innerWidth * window.innerHeight / 8000));
       
       for (let i = 0; i < particleCount; i++) {
         const element = document.createElement("div");
         element.className = "particle";
         
-        const size = Math.random() * 3 + 1;
+        const size = Math.random() * 4 + 1;
         element.style.width = `${size}px`;
         element.style.height = `${size}px`;
-        element.style.opacity = (Math.random() * 0.5 + 0.3).toString();
+        element.style.opacity = (Math.random() * 0.6 + 0.3).toString();
         
         const x = Math.random() * container.offsetWidth;
         const y = Math.random() * container.offsetHeight;
-        element.style.transform = `translate(${x}px, ${y}px)`;
+        // Add z coordinate for 3D effect (between -100 and 100)
+        const z = Math.random() * 200 - 100;
+        
+        // Apply 3D transform
+        element.style.transform = `translate3d(${x}px, ${y}px, ${z}px)`;
         
         container.appendChild(element);
         
         particlesRef.current.push({
           x,
           y,
+          z,
           size,
-          speedX: Math.random() * 0.5 - 0.25,
-          speedY: Math.random() * 0.5 - 0.25,
+          speedX: Math.random() * 0.7 - 0.35,
+          speedY: Math.random() * 0.7 - 0.35,
           element
         });
       }
@@ -77,7 +84,7 @@ const ParticleBackground: React.FC = () => {
       connectionsRef.current = [];
       
       // Create connection pool
-      for (let i = 0; i < 30; i++) {
+      for (let i = 0; i < 50; i++) {
         const element = document.createElement("div");
         element.className = "connection";
         element.style.opacity = "0"; // Start invisible
@@ -113,7 +120,14 @@ const ParticleBackground: React.FC = () => {
         particle.x = Math.max(0, Math.min(width, particle.x));
         particle.y = Math.max(0, Math.min(height, particle.y));
         
-        particle.element.style.transform = `translate(${particle.x}px, ${particle.y}px)`;
+        // Apply 3D transform with z position included
+        particle.element.style.transform = `translate3d(${particle.x}px, ${particle.y}px, ${particle.z}px)`;
+        
+        // Adjust size based on z position to create perspective
+        const scale = (particle.z + 100) / 200; // normalize to 0-1 range
+        const scaledSize = particle.size * (0.5 + scale * 0.8);
+        particle.element.style.width = `${scaledSize}px`;
+        particle.element.style.height = `${scaledSize}px`;
       });
       
       // Update connections
@@ -148,7 +162,11 @@ const ParticleBackground: React.FC = () => {
             connection.element.style.left = `${x1}px`;
             connection.element.style.top = `${y1}px`;
             connection.element.style.transform = `rotate(${angle}deg)`;
-            connection.element.style.opacity = (0.2 - distance / 150 * 0.2).toString();
+            
+            // Calculate opacity based on z positions (closer particles have more visible connections)
+            const zAvg = Math.abs((particleA.z + particleB.z) / 2);
+            const zFactor = 1 - (zAvg / 100); // Higher for particles closer to viewer
+            connection.element.style.opacity = ((0.3 - distance / 150 * 0.3) * zFactor).toString();
           }
         }
         
@@ -158,7 +176,7 @@ const ParticleBackground: React.FC = () => {
           const dy = particleA.y - mousePosition.current.y;
           const distance = Math.sqrt(dx * dx + dy * dy);
           
-          if (distance < 150) {
+          if (distance < 180) {
             const connection = connectionsRef.current[connectionIndex];
             connectionIndex++;
             
@@ -177,8 +195,9 @@ const ParticleBackground: React.FC = () => {
             connection.element.style.transform = `rotate(${angle}deg)`;
             
             // Make connections to mouse more visible
-            connection.element.style.opacity = (0.3 - distance / 150 * 0.3).toString();
-            connection.element.style.background = "linear-gradient(90deg, rgba(0, 255, 255, 0.1), rgba(0, 255, 255, 0.3))";
+            const zFactor = (particleA.z + 100) / 200; // normalize to 0-1 range (closer particles brighter)
+            connection.element.style.opacity = ((0.5 - distance / 180 * 0.5) * zFactor).toString();
+            connection.element.style.background = "linear-gradient(90deg, rgba(0, 255, 255, 0.1), rgba(0, 255, 255, 0.5))";
           }
         }
       }
@@ -201,10 +220,12 @@ const ParticleBackground: React.FC = () => {
     
     const handleMouseEnter = () => {
       isHovering.current = true;
+      container.style.cursor = "none"; // Hide cursor for better effect
     };
     
     const handleMouseLeave = () => {
       isHovering.current = false;
+      container.style.cursor = "auto"; // Restore cursor
     };
     
     const handleResize = () => {
@@ -251,7 +272,7 @@ const ParticleBackground: React.FC = () => {
   return (
     <div 
       ref={containerRef} 
-      className="absolute inset-0 overflow-hidden pointer-events-none z-0"
+      className="absolute inset-0 overflow-hidden z-0 perspective-1000"
     />
   );
 };
