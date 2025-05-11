@@ -14,8 +14,6 @@ const links: NavLink[] = [
   { id: "hero", label: "Home" },
   { id: "about", label: "About" },
   { id: "certificates", label: "Certificates" },
-  { id: "projects", label: "Projects" },
-  { id: "blog", label: "Blog" },
   { id: "contact", label: "Contact" },
 ];
 
